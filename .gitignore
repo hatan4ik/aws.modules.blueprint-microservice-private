@@ -1,0 +1,41 @@
+# Terraform working directories, state, and crash dumps
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Variable files are never shipped with this module
+*.tfvars
+*.tfvars.json
+
+# Local overrides
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# CLI configuration
+.terraformrc
+terraform.rc
+
+# Provider lock files are committed only at the repository root
+**/.terraform.lock.hcl
+!/.terraform.lock.hcl
+
+# Scanner artifacts. The CI Checkov action writes results.sarif and its problem
+# matchers, and the Trivy action writes .cache/ and trivy_envs.txt, into the
+# workspace root. The docs drift check stages the working directory before
+# counting changes, and an ignored file is never staged.
+*.sarif
+checkov-problem-matcher*.json
+trivy_envs.txt
+.cache/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+
+# Checkov --download-external-modules cache
+.external_modules/
