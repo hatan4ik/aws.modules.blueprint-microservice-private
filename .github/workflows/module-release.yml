@@ -19,3 +19,5 @@ jobs:
     with:
       release_tag: ${{ inputs.release_tag }}
       module_directory: .
+      # Root contract tests use override_module, which requires Terraform 1.8+.
+      terraform_version: 1.8.5

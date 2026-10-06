@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-06
+
+### Fixed
+
+- Run release-gate contract tests on Terraform 1.8.5, matching the root quality
+  job and its `override_module` test semantics.
+
+## [1.0.0] - 2026-10-06
+
 ### Added
 
 - Initial blueprint: one private HTTP microservice composed from `aws.modules.vpc` v1.1.0 (public ALB tier, private task tier with no internet route, ECR/logs/S3 endpoints plus secret-store and application endpoints, optional NAT gateway, flow logs under a created key), `aws.modules.alb` v1.0.1 (internet-facing ALB, HTTPS with HTTP redirect or HTTP-only, one `ip` target group), and `aws.modules.ecs-service` v1.0.1 (Fargate service on an existing cluster, digest-pinned single container with a read-only root filesystem and writable paths, task and execution roles from its own `modules/iam`, optional CPU autoscaling), each pinned by commit SHA.
