@@ -1,0 +1,88 @@
+name: Bug report
+description: A resource, validation, or output behaves differently from what the module documents.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Redact account IDs, ARNs, and secrets before pasting configuration or output.
+  - type: input
+    id: module-version
+    attributes:
+      label: Module version or commit
+      description: The tag or commit SHA pinned in your module `source` / `ref`.
+      placeholder: v1.0.0
+    validations:
+      required: true
+  - type: input
+    id: terraform-version
+    attributes:
+      label: Terraform version
+      description: Output of `terraform version`.
+      placeholder: 1.7.5
+    validations:
+      required: true
+  - type: input
+    id: provider-version
+    attributes:
+      label: AWS provider version
+      description: The `hashicorp/aws` version recorded in your `.terraform.lock.hcl`.
+      placeholder: 6.66.0
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      options:
+        - root module
+        - modules/container-definition
+        - modules/iam
+        - modules/autoscaling
+        - examples
+        - not sure
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: The smallest module call that reproduces the problem.
+      render: hcl
+      placeholder: |
+        module "service" {
+          source = "git::https://github.com/hatan4ik/aws.modules.blueprint-microservice-private.git?ref=v1.0.0"
+
+          name = "example"
+        }
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Plan or apply output
+      description: Relevant `terraform plan` or `terraform apply` output, with secrets redacted.
+      render: shell
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I redacted secrets, account IDs, and ARNs from everything above.
+          required: true
+        - label: I searched existing issues for this problem.
+          required: true

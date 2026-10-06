@@ -1,0 +1,22 @@
+formatter: "markdown table"
+
+output:
+  file: README.md
+  mode: inject
+
+sort:
+  enabled: true
+  by: name
+
+settings:
+  anchor: true
+  default: true
+  required: true
+  type: true
+  # Show provider version constraints, not the version resolved by `terraform
+  # init`. Only the repository root commits a lock file, so resolved versions
+  # would drift in every other directory whenever a new provider ships.
+  lockfile: false
+
+recursive:
+  enabled: false

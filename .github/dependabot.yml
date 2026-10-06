@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: chore(deps)
+
+  - package-ecosystem: terraform
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - terraform
+    commit-message:
+      prefix: chore(deps)

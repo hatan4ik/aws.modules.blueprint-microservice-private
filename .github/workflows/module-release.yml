@@ -1,0 +1,21 @@
+name: module-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing signed semantic-version tag to verify and publish.
+        required: true
+        type: string
+
+permissions:
+  # The reusable workflow creates the immutable GitHub release after it has
+  # validated the caller-supplied, GitHub-verified annotated tag.
+  contents: write
+
+jobs:
+  release:
+    uses: hatan4ik/terraform-pipelines/.github/workflows/module-release.yml@8fc2a04c7931dd449097bb92b15b085278e3f67a # v0.1.1
+    with:
+      release_tag: ${{ inputs.release_tag }}
+      module_directory: .

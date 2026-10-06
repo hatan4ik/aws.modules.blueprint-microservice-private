@@ -1,0 +1,8 @@
+# tests/integration is short-lived infrastructure created and destroyed by
+# scripts/integration-e2e.sh in the caller's own account: a fixture cluster,
+# and a blueprint call with ALB deletion protection deliberately off so the
+# run can tear itself down (CKV_AWS_150 when external modules are scanned).
+# Neither is a deployable pattern, so both are excluded from policy scanning.
+skip-path:
+  - tests/integration/setup
+  - tests/integration/e2e
