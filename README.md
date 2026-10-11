@@ -196,7 +196,7 @@ A Fargate cluster is not tied to a VPC, so the shared cluster runs this service'
 
 Releases follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and are recorded in [CHANGELOG.md](CHANGELOG.md). Pin the commit SHA of a release tag, never a branch or a movable tag. A leaf-module upgrade that changes what this blueprint creates is a blueprint release of its own, with the same scrutiny. A change that makes a previously accepted configuration fail at plan, or that removes access a running service had, is a major release.
 
-**Upgrading from 1.x to 2.0.0.** If you relied on the HTTP-only default (no `load_balancer.certificate_arn`), set `load_balancer.allow_plain_http = true`. Remove any `container.writable_paths` entry the plan now rejects. If the service reads S3 buckets owned by another account in the same region, it loses that access; see [Failure modes](#failure-modes-of-the-composition). The upgrade changes the endpoints' policies in place; nothing is replaced.
+**Upgrading from 1.x to 2.0.0.** See [docs/UPGRADE-2.0.0.md](docs/UPGRADE-2.0.0.md). If you relied on the HTTP-only default (no `load_balancer.certificate_arn`), set `load_balancer.allow_plain_http = true`. Remove any `container.writable_paths` entry the plan now rejects. If the service reads S3 buckets owned by another account in the same region, it loses that access; see [Failure modes](#failure-modes-of-the-composition). The upgrade changes the endpoints' policies in place; nothing is replaced.
 
 ## Contributing
 

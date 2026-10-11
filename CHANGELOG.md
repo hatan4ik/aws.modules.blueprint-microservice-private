@@ -15,6 +15,8 @@ interface, and the README's versioning rule requires a major release for them.
 
 ### Upgrading from 1.x
 
+Full notes: [docs/UPGRADE-2.0.0.md](docs/UPGRADE-2.0.0.md).
+
 - If you relied on the HTTP default (no `load_balancer.certificate_arn`), set
   `load_balancer.allow_plain_http = true`. Without it the plan now fails.
 - Remove or move any `container.writable_paths` entry the plan now rejects
