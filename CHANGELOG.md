@@ -6,6 +6,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-11
+
+Security hardening. This is a major release because configurations that 1.x
+accepted now fail at plan, and a running service can lose access it had:
+Semantic Versioning treats both as incompatible changes to the public
+interface, and the README's versioning rule requires a major release for them.
+
+### Upgrading from 1.x
+
+- If you relied on the HTTP default (no `load_balancer.certificate_arn`), set
+  `load_balancer.allow_plain_http = true`. Without it the plan now fails.
+- Remove or move any `container.writable_paths` entry the plan now rejects
+  (see below).
+- If the service reads S3 buckets owned by another account in the same region,
+  that access is now denied by the S3 gateway endpoint's policy.
+- Applying the upgrade updates the VPC endpoints' policies in place; no
+  resource is replaced.
+
+### Changed
+
+- **Breaking:** plain HTTP is no longer the default. `load_balancer` gains
+  `allow_plain_http` (default `false`), and a precondition on
+  `data.aws_caller_identity.current` fails the plan when `certificate_arn` is
+  null without it. The `http_only_listener` check now warns only when the
+  opt-in is in effect.
+- **Breaking:** `container.writable_paths` rejects un-normalised paths (`//`,
+  `.` or `..` segments), paths under `/etc`, `/usr`, `/bin`, `/sbin`, `/lib`,
+  `/lib32`, `/lib64`, `/libx32`, `/root`, `/proc`, `/sys`, `/dev`, or `/boot`,
+  `/var` and `/var/lib` themselves, nested paths, and paths whose derived
+  volume names collide. Application directories (`/tmp`, `/run`,
+  `/var/cache/<app>`, `/var/log/<app>`, `/var/lib/<app>`, `/var/tmp`, `/home`,
+  `/app`) remain accepted.
+- **Breaking:** the VPC endpoints carry least-privilege policies instead of the
+  default full-access policy. `ecr.api`, `ecr.dkr`, `logs`, `secretsmanager`,
+  `ssm`, and a `dynamodb` gateway allow only principals of the provider's
+  account (`aws:PrincipalAccount`). The `s3` gateway allows `s3:GetObject` on
+  the region's ECR layer bucket (`prod-<region>-starport-layer-bucket`) and
+  anything on buckets this account owns (`aws:ResourceAccount`).
+  Caller-declared interface endpoints keep the default policy.
+
+### Fixed
+
+- Two `container.writable_paths` entries that derived the same volume name
+  (for example `/var/cache-app` and `/var/cache/app`) failed with a
+  duplicate-key error; they are now rejected by a validation that names the
+  cause.
+
 ## [1.0.2] - 2026-10-06
 
 ### Fixed
