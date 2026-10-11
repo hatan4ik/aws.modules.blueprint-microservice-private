@@ -3,7 +3,7 @@
 `scripts/integration-e2e.sh` (`make integration-e2e`, or the dispatch-only `integration` workflow) proves the composition against the real AWS API in **your** account:
 
 1. `tests/integration/setup` creates a disposable ECS cluster `bp-e2e-<hex>` (the blueprint never creates one) and picks two available zones.
-2. `tests/integration/e2e` applies the blueprint against that cluster with stock nginx from ECR Public, pinned by digest, on port 80 with `/var/cache/nginx`, `/run`, and `/tmp` writable. It runs without a certificate (plain HTTP), with ALB deletion protection off, and with `network.nat_gateway = true`, because ECR Public is not served by the private ECR endpoints. `service.wait_for_steady_state` makes the apply wait until the task passes the ALB health check.
+2. `tests/integration/e2e` applies the blueprint against that cluster with stock nginx from ECR Public, pinned by digest, on port 80 with `/var/cache/nginx`, `/run`, and `/tmp` writable. It runs without a certificate (plain HTTP, opted into with `load_balancer.allow_plain_http = true`), with ALB deletion protection off, and with `network.nat_gateway = true`, because ECR Public is not served by the private ECR endpoints. `service.wait_for_steady_state` makes the apply wait until the task passes the ALB health check.
 3. The script requires `200` from the ALB URL within five minutes.
 4. Both roots are destroyed, also when any step fails.
 

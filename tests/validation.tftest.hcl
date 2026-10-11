@@ -474,10 +474,60 @@ run "warns_when_serving_plain_http" {
 
   variables {
     load_balancer = {
-      web_acl_arn = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
+      allow_plain_http = true
+      web_acl_arn      = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
     }
   }
 
   expect_failures = [check.http_only_listener]
 }
 
+
+# Plain HTTP is an explicit opt-in. A caller who leaves certificate_arn and
+# allow_plain_http at their defaults is stopped at plan by the precondition on
+# data.aws_caller_identity.current (the fixture's account matches, so its
+# account postcondition cannot be what fails here). web_acl_arn is set only to
+# keep aws.modules.alb's public_without_waf check quiet: a nested module's
+# check warning fails a test run and cannot be named in expect_failures.
+run "rejects_plain_http_by_default" {
+  command = plan
+
+  variables {
+    load_balancer = {
+      web_acl_arn = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
+    }
+  }
+
+  expect_failures = [data.aws_caller_identity.current]
+}
+
+run "rejects_plain_http_when_explicitly_disallowed" {
+  command = plan
+
+  variables {
+    load_balancer = {
+      allow_plain_http = false
+      web_acl_arn      = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
+    }
+  }
+
+  expect_failures = [data.aws_caller_identity.current]
+}
+
+# With a certificate the flag changes nothing: HTTPS, and no warning.
+run "allow_plain_http_is_inert_with_a_certificate" {
+  command = apply
+
+  variables {
+    load_balancer = {
+      certificate_arn  = "arn:aws:acm:us-east-2:123456789012:certificate/11111111-1111-1111-1111-111111111111"
+      allow_plain_http = true
+      web_acl_arn      = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
+    }
+  }
+
+  assert {
+    condition     = output.url == "https://orders-123456789.us-east-2.elb.amazonaws.com"
+    error_message = "allow_plain_http does not downgrade a service that has a certificate."
+  }
+}

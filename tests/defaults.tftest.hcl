@@ -262,7 +262,7 @@ run "edge_defaults_are_https_with_deletion_protection" {
   }
 
   assert {
-    condition     = var.load_balancer.deletion_protection && var.load_balancer.ingress_cidrs == toset(["0.0.0.0/0"])
-    error_message = "The ALB is open to the internet and deletion-protected by default."
+    condition     = var.load_balancer.deletion_protection && var.load_balancer.ingress_cidrs == toset(["0.0.0.0/0"]) && !var.load_balancer.allow_plain_http
+    error_message = "The ALB is open to the internet, deletion-protected, and refuses plain HTTP by default."
   }
 }

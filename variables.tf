@@ -240,12 +240,14 @@ variable "health_check" {
 variable "load_balancer" {
   description = <<-EOT
     The internet-facing ALB in front of the service.
-    certificate_arn (an ACM certificate in the provider's region) serves HTTPS on 443 and redirects port 80 to it. Leaving it null serves plain HTTP on port 80 only, which a check block flags on every plan; use it only for a disposable environment.
+    certificate_arn (an ACM certificate in the provider's region) serves HTTPS on 443 and redirects port 80 to it. It is required unless allow_plain_http = true: a null certificate_arn without that flag fails the plan.
+    allow_plain_http = true (default false) is the explicit opt-in to serving plain HTTP on port 80 only when certificate_arn is null, for a disposable environment; a check block still flags it on every plan. It has no effect when certificate_arn is set.
     ingress_cidrs limits who can reach the listeners. web_acl_arn associates a REGIONAL WAFv2 web ACL. access_logs_bucket names an existing S3 bucket whose policy already admits ELB log delivery.
     deletion_protection = true (default) blocks deleting the ALB, including on terraform destroy, until it is set to false and applied.
   EOT
   type = object({
     certificate_arn     = optional(string)
+    allow_plain_http    = optional(bool, false)
     ingress_cidrs       = optional(set(string), ["0.0.0.0/0"])
     web_acl_arn         = optional(string)
     access_logs_bucket  = optional(string)

@@ -48,6 +48,9 @@ module "alb" {
   public_subnet_ids = local.public_subnet_ids
   tags              = var.tags
 
+  # HTTP-only is reachable only through load_balancer.allow_plain_http: the
+  # precondition on data.aws_caller_identity.current (guards.tf) fails the plan
+  # when certificate_arn is null without it.
   certificate_arn  = var.load_balancer.certificate_arn
   create_http_only = var.load_balancer.certificate_arn == null
 
