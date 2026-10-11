@@ -52,14 +52,16 @@ variables {
 
   internet = { nat_gateways = {} }
 
+  # policy_json is exactly what jsonencode renders in locals.tf for this
+  # account and region (tests/defaults.tftest.hcl asserts the blueprint side).
   endpoints = {
     interface = {
-      "ecr.api" = { service_name = "com.amazonaws.us-east-2.ecr.api", subnet_tier = "private" }
-      "ecr.dkr" = { service_name = "com.amazonaws.us-east-2.ecr.dkr", subnet_tier = "private" }
-      "logs"    = { service_name = "com.amazonaws.us-east-2.logs", subnet_tier = "private" }
+      "ecr.api" = { service_name = "com.amazonaws.us-east-2.ecr.api", subnet_tier = "private", policy_json = "{\"Statement\":[{\"Action\":\"*\",\"Condition\":{\"StringEquals\":{\"aws:PrincipalAccount\":\"123456789012\"}},\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\",\"Sid\":\"OnlyThisAccountsPrincipals\"}],\"Version\":\"2012-10-17\"}" }
+      "ecr.dkr" = { service_name = "com.amazonaws.us-east-2.ecr.dkr", subnet_tier = "private", policy_json = "{\"Statement\":[{\"Action\":\"*\",\"Condition\":{\"StringEquals\":{\"aws:PrincipalAccount\":\"123456789012\"}},\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\",\"Sid\":\"OnlyThisAccountsPrincipals\"}],\"Version\":\"2012-10-17\"}" }
+      "logs"    = { service_name = "com.amazonaws.us-east-2.logs", subnet_tier = "private", policy_json = "{\"Statement\":[{\"Action\":\"*\",\"Condition\":{\"StringEquals\":{\"aws:PrincipalAccount\":\"123456789012\"}},\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\",\"Sid\":\"OnlyThisAccountsPrincipals\"}],\"Version\":\"2012-10-17\"}" }
     }
     gateway = {
-      s3 = { service_name = "com.amazonaws.us-east-2.s3", route_table_tiers = ["private"] }
+      s3 = { service_name = "com.amazonaws.us-east-2.s3", route_table_tiers = ["private"], policy_json = "{\"Statement\":[{\"Action\":\"s3:GetObject\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"arn:aws:s3:::prod-us-east-2-starport-layer-bucket/*\",\"Sid\":\"EcrImageLayers\"},{\"Action\":\"s3:*\",\"Condition\":{\"StringEquals\":{\"aws:ResourceAccount\":\"123456789012\"}},\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\",\"Sid\":\"OnlyThisAccountsBuckets\"}],\"Version\":\"2012-10-17\"}" }
     }
   }
 
