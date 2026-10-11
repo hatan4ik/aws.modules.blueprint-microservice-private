@@ -92,7 +92,7 @@ variable "container" {
     image must be pinned to a digest (repository@sha256:<64 hex>); the ECS service module rejects anything else at plan time.
     port is the container port the ALB forwards to and health-checks. cpu and memory are task-level Fargate units and MiB (validated as a supported pair at plan time).
     environment is plain text; secrets maps variable names to Secrets Manager or SSM parameter ARNs, and the execution role is granted exactly those ARNs. secrets_kms_key_arns lists customer-managed keys protecting them.
-    The root filesystem is read-only; writable_paths lists absolute paths (for example /tmp) that get a writable ephemeral volume.
+    The root filesystem is read-only; writable_paths lists absolute paths (for example /tmp, /run, /var/cache/<app>, /var/log/<app>, /home/<user>, /app/data) that each get a writable ephemeral volume. Paths must be normalised (no //, no . or .. segment, no trailing /), must not be nested in one another, and must not lie under a system root (/etc, /usr, /bin, /sbin, /lib, /lib32, /lib64, /libx32, /root, /proc, /sys, /dev, /boot) or be /var or /var/lib themselves.
   EOT
   type = object({
     image                = string
@@ -126,6 +126,42 @@ variable "container" {
   validation {
     condition     = alltrue([for path in var.container.writable_paths : can(regex("^/[A-Za-z0-9._/-]*[A-Za-z0-9._-]$", path))])
     error_message = "Every container.writable_paths entry must be an absolute path such as /tmp, without a trailing slash."
+  }
+
+  # A writable volume on an un-normalised path either names a different
+  # directory than it appears to (/tmp/.. is /) or derives a misleading
+  # volume name.
+  validation {
+    condition     = alltrue([for path in var.container.writable_paths : !strcontains(path, "//") && !contains(split("/", path), ".") && !contains(split("/", path), "..")])
+    error_message = "container.writable_paths entries must be normalised: no empty (//), . or .. segments."
+  }
+
+  # Mounting a writable volume over a directory that holds executables,
+  # libraries, system configuration, root's home, the kernel interfaces, or
+  # the boot files defeats the read-only root filesystem. /var and /var/lib
+  # are refused whole (they would shadow every package's state), but
+  # application directories below them, such as /var/lib/<app>, are allowed.
+  validation {
+    condition = alltrue([for path in var.container.writable_paths :
+      !contains(["etc", "usr", "bin", "sbin", "lib", "lib32", "lib64", "libx32", "root", "proc", "sys", "dev", "boot"], try(split("/", path)[1], "")) &&
+      !contains(["/var", "/var/lib"], path)
+    ])
+    error_message = "container.writable_paths may not be under /etc, /usr, /bin, /sbin, /lib, /lib32, /lib64, /libx32, /root, /proc, /sys, /dev, or /boot, and may not be /var or /var/lib itself: a writable volume there defeats the read-only root filesystem. Use an application directory such as /tmp, /run, /var/cache/<app>, or /var/lib/<app>."
+  }
+
+  # One volume inside another is mounted in an order ECS does not promise,
+  # so the inner path may end up on either volume.
+  validation {
+    condition     = alltrue([for outer in var.container.writable_paths : alltrue([for inner in var.container.writable_paths : !startswith(inner, "${outer}/")])])
+    error_message = "container.writable_paths entries may not be nested (for example /tmp and /tmp/cache); list only the outer path."
+  }
+
+  # Volume names are derived from the paths (locals.tf, writable_volumes);
+  # keep this expression identical to it. /var/cache-app and /var/cache/app
+  # would otherwise both become rw-var-cache-app.
+  validation {
+    condition     = length(distinct([for path in var.container.writable_paths : replace(trimprefix(path, "/"), "/[^A-Za-z0-9_-]/", "-")])) == length(var.container.writable_paths)
+    error_message = "Two container.writable_paths entries derive the same volume name (each non-alphanumeric character becomes -, so /var/cache-app and /var/cache/app collide). Rename one of the paths."
   }
 
   validation {

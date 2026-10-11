@@ -116,7 +116,9 @@ locals {
   # -------------------------------------------------------------- service
 
   # One ephemeral bind-mount volume per writable path, named from the path
-  # (/tmp -> rw-tmp, /var/cache/app -> rw-var-cache-app).
+  # (/tmp -> rw-tmp, /var/cache/app -> rw-var-cache-app). variables.tf
+  # validates the paths and that these names are unique, with the same
+  # expression.
   writable_volumes = {
     for path in var.container.writable_paths : "rw-${replace(trimprefix(path, "/"), "/[^A-Za-z0-9_-]/", "-")}" => path
   }
