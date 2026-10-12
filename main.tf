@@ -41,7 +41,7 @@ module "vpc" {
 }
 
 module "alb" {
-  source = "git::https://github.com/hatan4ik/aws.modules.alb.git?ref=2c3441caf2e19fc469cf678f3ac4cac0c632678e" # v1.0.1
+  source = "git::https://github.com/hatan4ik/aws.modules.alb.git?ref=84bc394752b18be05de3a7128227c6601e1a1f29"
 
   name              = var.name
   vpc_id            = module.vpc.vpc_id

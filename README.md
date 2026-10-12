@@ -224,7 +224,7 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 | Name | Source | Version |
 |------|--------|---------|
-| <a name="module_alb"></a> [alb](#module\_alb) | git::https://github.com/hatan4ik/aws.modules.alb.git | 2c3441caf2e19fc469cf678f3ac4cac0c632678e |
+| <a name="module_alb"></a> [alb](#module\_alb) | git::https://github.com/hatan4ik/aws.modules.alb.git | 84bc394752b18be05de3a7128227c6601e1a1f29 |
 | <a name="module_service"></a> [service](#module\_service) | git::https://github.com/hatan4ik/aws.modules.ecs-service.git | 79e268f3f60bd236418054e0b42d464640b88a89 |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | git::https://github.com/hatan4ik/aws.modules.vpc.git | 969e78e0653ec54a6985fd93f9ca23345bd0b84a |
 
