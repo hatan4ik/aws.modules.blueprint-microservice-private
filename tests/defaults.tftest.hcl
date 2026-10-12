@@ -184,6 +184,54 @@ run "private_tier_reaches_aws_only_through_endpoints" {
     condition     = output.interface_endpoint_services == tolist(["ecr.api", "ecr.dkr", "logs"])
     error_message = "interface_endpoint_services reports the endpoint set, sorted."
   }
+
+  # The rendered endpoint policies, decoded and compared whole, so any added
+  # statement or widened condition fails here.
+  assert {
+    condition = alltrue([for endpoint in values(local.endpoints.interface) : jsondecode(endpoint.policy_json) == jsondecode(jsonencode({
+      Version = "2012-10-17"
+      Statement = [{
+        Sid       = "OnlyThisAccountsPrincipals"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "*"
+        Resource  = "*"
+        Condition = { StringEquals = { "aws:PrincipalAccount" = "123456789012" } }
+      }]
+    }))])
+    error_message = "ecr.api, ecr.dkr, and logs admit only principals of this account (aws:PrincipalAccount = 123456789012), and nothing else."
+  }
+
+  assert {
+    condition = jsondecode(local.endpoints.gateway.s3.policy_json) == jsondecode(jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Sid       = "EcrImageLayers"
+          Effect    = "Allow"
+          Principal = "*"
+          Action    = "s3:GetObject"
+          Resource  = "arn:aws:s3:::prod-us-east-2-starport-layer-bucket/*"
+        },
+        {
+          Sid       = "OnlyThisAccountsBuckets"
+          Effect    = "Allow"
+          Principal = "*"
+          Action    = "s3:*"
+          Resource  = "*"
+          Condition = { StringEquals = { "aws:ResourceAccount" = "123456789012" } }
+        },
+      ]
+    }))
+    error_message = "The S3 gateway allows GetObject on the region's ECR layer bucket and anything on this account's buckets (aws:ResourceAccount), and refuses every other bucket."
+  }
+
+  # Byte-for-byte the strings tests/vpc_contract.tftest.hcl hands the pinned
+  # aws.modules.vpc, so that suite proves the leaf accepts these exact policies.
+  assert {
+    condition     = local.endpoints.interface["ecr.api"].policy_json == "{\"Statement\":[{\"Action\":\"*\",\"Condition\":{\"StringEquals\":{\"aws:PrincipalAccount\":\"123456789012\"}},\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\",\"Sid\":\"OnlyThisAccountsPrincipals\"}],\"Version\":\"2012-10-17\"}" && local.endpoints.gateway.s3.policy_json == "{\"Statement\":[{\"Action\":\"s3:GetObject\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"arn:aws:s3:::prod-us-east-2-starport-layer-bucket/*\",\"Sid\":\"EcrImageLayers\"},{\"Action\":\"s3:*\",\"Condition\":{\"StringEquals\":{\"aws:ResourceAccount\":\"123456789012\"}},\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"*\",\"Sid\":\"OnlyThisAccountsBuckets\"}],\"Version\":\"2012-10-17\"}"
+    error_message = "The rendered policy strings match the ones in tests/vpc_contract.tftest.hcl; update that suite when the policies change."
+  }
 }
 
 run "task_security_group_is_alb_in_endpoints_out" {
@@ -262,7 +310,7 @@ run "edge_defaults_are_https_with_deletion_protection" {
   }
 
   assert {
-    condition     = var.load_balancer.deletion_protection && var.load_balancer.ingress_cidrs == toset(["0.0.0.0/0"])
-    error_message = "The ALB is open to the internet and deletion-protected by default."
+    condition     = var.load_balancer.deletion_protection && var.load_balancer.ingress_cidrs == toset(["0.0.0.0/0"]) && !var.load_balancer.allow_plain_http
+    error_message = "The ALB is open to the internet, deletion-protected, and refuses plain HTTP by default."
   }
 }

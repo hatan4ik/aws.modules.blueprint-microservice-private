@@ -172,7 +172,8 @@ run "service_waits_for_the_http_only_listener" {
 
   variables {
     load_balancer = {
-      web_acl_arn = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
+      allow_plain_http = true
+      web_acl_arn      = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
     }
   }
 

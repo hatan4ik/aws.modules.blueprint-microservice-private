@@ -65,17 +65,74 @@ locals {
   )
   gateway_endpoint_services = setunion(["s3"], var.network.gateway_endpoint_services)
 
+  # Endpoint policies. Without one, AWS attaches full access, and an endpoint
+  # becomes a path for any credentials (an attacker's own, or none at all) to
+  # move data out of the private tier to resources in another account.
+  #
+  # - The interface endpoints the blueprint itself needs, and the dynamodb
+  #   gateway, admit only principals of this account (aws:PrincipalAccount).
+  #   Every call through them is signed by the execution role or the task
+  #   role, so nothing the service does is lost. The account comes from the
+  #   guard read, which guards.tf has already proved equals the cluster's.
+  # - The s3 gateway cannot use aws:PrincipalAccount alone: Fargate fetches
+  #   ECR image layers from an AWS-owned bucket with URLs ECR signs, so those
+  #   requests are neither from nor to this account. It allows s3:GetObject on
+  #   that bucket (the ARN AWS documents in the ECR user guide, "Minimum
+  #   Amazon S3 bucket permissions for Amazon ECR") and anything on buckets
+  #   this account owns (aws:ResourceAccount); every other bucket is refused.
+  # - Interface endpoints the caller adds (network.interface_endpoint_services)
+  #   keep the leaf's default policy: not every AWS service accepts an
+  #   endpoint policy, and an unsupported one fails the apply. See the README.
+  partition = local.cluster_arn_parts[1]
+
+  account_principals_only_services = toset(["ecr.api", "ecr.dkr", "logs", "secretsmanager", "ssm", "dynamodb"])
+
+  account_principals_only_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "OnlyThisAccountsPrincipals"
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = "*"
+      Resource  = "*"
+      Condition = { StringEquals = { "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id } }
+    }]
+  })
+
+  s3_gateway_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "EcrImageLayers"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "arn:${local.partition}:s3:::prod-${data.aws_region.current.region}-starport-layer-bucket/*"
+      },
+      {
+        Sid       = "OnlyThisAccountsBuckets"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource  = "*"
+        Condition = { StringEquals = { "aws:ResourceAccount" = data.aws_caller_identity.current.account_id } }
+      },
+    ]
+  })
+
   endpoints = {
     interface = {
       for service in local.interface_endpoint_services : service => {
         service_name = "com.amazonaws.${data.aws_region.current.region}.${service}"
         subnet_tier  = "private"
+        policy_json  = contains(local.account_principals_only_services, service) ? local.account_principals_only_policy : null
       }
     }
     gateway = {
       for service in local.gateway_endpoint_services : service => {
         service_name      = "com.amazonaws.${data.aws_region.current.region}.${service}"
         route_table_tiers = ["private"]
+        policy_json       = service == "s3" ? local.s3_gateway_policy : local.account_principals_only_policy
       }
     }
   }
@@ -116,7 +173,9 @@ locals {
   # -------------------------------------------------------------- service
 
   # One ephemeral bind-mount volume per writable path, named from the path
-  # (/tmp -> rw-tmp, /var/cache/app -> rw-var-cache-app).
+  # (/tmp -> rw-tmp, /var/cache/app -> rw-var-cache-app). variables.tf
+  # validates the paths and that these names are unique, with the same
+  # expression.
   writable_volumes = {
     for path in var.container.writable_paths : "rw-${replace(trimprefix(path, "/"), "/[^A-Za-z0-9_-]/", "-")}" => path
   }

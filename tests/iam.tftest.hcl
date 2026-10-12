@@ -194,6 +194,11 @@ run "secret_stores_get_their_endpoints" {
     condition     = toset(keys(local.endpoints.interface)) == toset(["ecr.api", "ecr.dkr", "logs", "secretsmanager", "ssm"])
     error_message = "Declaring a Secrets Manager or SSM secret adds that store's interface endpoint, so the task can fetch it at start without an internet path."
   }
+
+  assert {
+    condition     = alltrue([for service in ["secretsmanager", "ssm"] : jsondecode(local.endpoints.interface[service].policy_json).Statement[0].Condition.StringEquals["aws:PrincipalAccount"] == "123456789012" && length(jsondecode(local.endpoints.interface[service].policy_json).Statement) == 1])
+    error_message = "The secret-store endpoints admit only principals of this account, like the other endpoints the blueprint needs."
+  }
 }
 
 run "task_role_statements_never_reach_the_execution_role" {

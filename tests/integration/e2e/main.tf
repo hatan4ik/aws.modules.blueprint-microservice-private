@@ -1,7 +1,8 @@
 # The blueprint applied for real, as a caller would, with the three settings a
-# disposable run needs: no certificate (plain HTTP), no deletion protection,
-# and a NAT gateway because the image comes from ECR Public, which private ECR
-# endpoints do not serve.
+# disposable run needs: no certificate (plain HTTP, explicitly allowed with
+# load_balancer.allow_plain_http), no deletion protection, and a NAT gateway
+# because the image comes from ECR Public, which private ECR endpoints do not
+# serve.
 #
 # This is a plain root applied by scripts/integration-e2e.sh rather than a
 # terraform test suite: aws.modules.vpc's internet_path_declared check always
@@ -39,7 +40,10 @@ module "blueprint" {
     matcher = "200"
   }
 
+  # No certificate in a throwaway account, so plain HTTP must be opted into;
+  # without allow_plain_http the blueprint refuses the plan.
   load_balancer = {
+    allow_plain_http    = true
     deletion_protection = false
   }
 

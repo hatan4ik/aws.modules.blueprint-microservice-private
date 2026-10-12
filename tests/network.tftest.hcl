@@ -177,6 +177,16 @@ run "application_endpoints_open_matching_egress" {
   }
 
   assert {
+    condition     = local.endpoints.interface.sqs.policy_json == null && local.endpoints.interface.kms.policy_json == null
+    error_message = "Caller-declared interface endpoints keep the leaf's default policy: not every service accepts an endpoint policy."
+  }
+
+  assert {
+    condition     = jsondecode(local.endpoints.gateway.dynamodb.policy_json).Statement[0].Condition.StringEquals["aws:PrincipalAccount"] == "123456789012" && length(jsondecode(local.endpoints.gateway.dynamodb.policy_json).Statement) == 1
+    error_message = "The DynamoDB gateway admits only principals of this account."
+  }
+
+  assert {
     condition     = toset(keys(local.task_egress_rules)) == toset(["endpoints", "s3-gateway", "dynamodb-gateway"])
     error_message = "Each gateway endpoint gets its own HTTPS egress rule; interface endpoints share the endpoint security group rule."
   }
@@ -254,5 +264,59 @@ run "autoscaling_tracks_cpu" {
   assert {
     condition     = local.autoscaling.min_capacity == 2 && local.autoscaling.max_capacity == 10 && local.autoscaling.policies.cpu.target_tracking.predefined_metric_type == "ECSServiceAverageCPUUtilization" && local.autoscaling.policies.cpu.target_tracking.target_value == 60
     error_message = "Autoscaling tracks average CPU at 60 percent between the given bounds."
+  }
+}
+
+# The endpoint policies take the account and region from the provider (the
+# guard reads), not from fixed strings: a second account and region render a
+# second set of values.
+run "endpoint_policies_follow_the_account_and_region" {
+  command = plan
+
+  override_data {
+    target = data.aws_region.current
+    values = { region = "eu-west-1" }
+  }
+
+  override_data {
+    target = data.aws_caller_identity.current
+    values = { account_id = "210987654321" }
+  }
+
+  variables {
+    cluster_arn = "arn:aws:ecs:eu-west-1:210987654321:cluster/platform"
+    network = {
+      cidr_block         = "10.40.0.0/16"
+      availability_zones = ["eu-west-1a", "eu-west-1b"]
+    }
+  }
+
+  assert {
+    condition     = jsondecode(local.endpoints.interface["ecr.dkr"].policy_json).Statement[0].Condition.StringEquals["aws:PrincipalAccount"] == "210987654321"
+    error_message = "aws:PrincipalAccount is the provider's account."
+  }
+
+  assert {
+    condition = jsondecode(local.endpoints.gateway.s3.policy_json) == jsondecode(jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Sid       = "EcrImageLayers"
+          Effect    = "Allow"
+          Principal = "*"
+          Action    = "s3:GetObject"
+          Resource  = "arn:aws:s3:::prod-eu-west-1-starport-layer-bucket/*"
+        },
+        {
+          Sid       = "OnlyThisAccountsBuckets"
+          Effect    = "Allow"
+          Principal = "*"
+          Action    = "s3:*"
+          Resource  = "*"
+          Condition = { StringEquals = { "aws:ResourceAccount" = "210987654321" } }
+        },
+      ]
+    }))
+    error_message = "The S3 gateway names the eu-west-1 ECR layer bucket and the provider's account."
   }
 }

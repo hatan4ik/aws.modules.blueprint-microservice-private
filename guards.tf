@@ -19,10 +19,18 @@ data "aws_region" "current" {
   }
 }
 
-# Read only for its postcondition.
-# tflint-ignore: terraform_unused_declarations
+# Also carries the plain-HTTP gate (a precondition, so it fails before the
+# read) and supplies the account the VPC endpoint policies admit (locals.tf).
 data "aws_caller_identity" "current" {
   lifecycle {
+    # aws.modules.alb treats create_http_only as an explicit escape hatch, never
+    # a default. Without this gate, a caller who set no certificate_arn would
+    # get an internet-facing plaintext listener and only a warning.
+    precondition {
+      condition     = var.load_balancer.certificate_arn != null || var.load_balancer.allow_plain_http
+      error_message = "load_balancer.certificate_arn is null and load_balancer.allow_plain_http is false. Supply an ACM certificate in load_balancer.certificate_arn to serve HTTPS, or set load_balancer.allow_plain_http = true to accept an internet-facing plain-HTTP listener (disposable environments only)."
+    }
+
     postcondition {
       condition     = self.account_id == local.account_id
       error_message = "cluster_arn belongs to account ${local.account_id} but the AWS provider is authenticated to ${self.account_id}. ECS services cannot run on another account's cluster."

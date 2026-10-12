@@ -299,6 +299,234 @@ run "rejects_trailing_slash_writable_path" {
   expect_failures = [var.container]
 }
 
+# container.writable_paths: normalised, outside the system roots, not nested,
+# and with distinct derived volume names.
+
+run "rejects_double_slash_writable_path" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["//tmp"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_dot_segment_writable_path" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/."] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_dot_segment_inside_writable_path" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/tmp/./cache"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_dotdot_segment_writable_path" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/tmp/.."] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_etc" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/etc"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_usr_bin" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/usr/bin"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_usr_local_subdirectory" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/usr/local/app"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_bin" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/bin"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_sbin" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/sbin"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_lib" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/lib"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_lib64" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/lib64"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_root_home" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/root"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_proc" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/proc"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_sys" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/sys"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_dev" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/dev"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_boot" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/boot"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_var" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/var"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_var_lib" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/var/lib"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_system_root_among_valid_paths" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/tmp", "/etc/nginx"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_nested_writable_paths" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/tmp", "/tmp/cache"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+run "rejects_writable_paths_with_colliding_volume_names" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/var/cache-app", "/var/cache/app"] }
+  }
+
+  expect_failures = [var.container]
+}
+
+# The paths stock nginx needs (tests/integration/e2e) and application
+# directories under /var, /home, and /app stay allowed.
+run "accepts_application_writable_paths" {
+  command = plan
+
+  variables {
+    container = { image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", writable_paths = ["/var/cache/nginx", "/run", "/tmp", "/var/log/app", "/var/lib/app", "/var/tmp", "/home/app", "/app/data", "/etcetera", "/usrdata"] }
+  }
+
+  assert {
+    condition     = length(local.writable_volumes) == 10 && local.writable_volumes["rw-var-cache-nginx"] == "/var/cache/nginx" && local.writable_volumes["rw-run"] == "/run" && local.writable_volumes["rw-tmp"] == "/tmp"
+    error_message = "Application paths, including the e2e nginx paths and names that merely start with a system root's letters, are accepted and each becomes one volume."
+  }
+}
+
 run "rejects_unknown_cpu_architecture" {
   command = plan
 
@@ -474,10 +702,60 @@ run "warns_when_serving_plain_http" {
 
   variables {
     load_balancer = {
-      web_acl_arn = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
+      allow_plain_http = true
+      web_acl_arn      = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
     }
   }
 
   expect_failures = [check.http_only_listener]
 }
 
+
+# Plain HTTP is an explicit opt-in. A caller who leaves certificate_arn and
+# allow_plain_http at their defaults is stopped at plan by the precondition on
+# data.aws_caller_identity.current (the fixture's account matches, so its
+# account postcondition cannot be what fails here). web_acl_arn is set only to
+# keep aws.modules.alb's public_without_waf check quiet: a nested module's
+# check warning fails a test run and cannot be named in expect_failures.
+run "rejects_plain_http_by_default" {
+  command = plan
+
+  variables {
+    load_balancer = {
+      web_acl_arn = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
+    }
+  }
+
+  expect_failures = [data.aws_caller_identity.current]
+}
+
+run "rejects_plain_http_when_explicitly_disallowed" {
+  command = plan
+
+  variables {
+    load_balancer = {
+      allow_plain_http = false
+      web_acl_arn      = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
+    }
+  }
+
+  expect_failures = [data.aws_caller_identity.current]
+}
+
+# With a certificate the flag changes nothing: HTTPS, and no warning.
+run "allow_plain_http_is_inert_with_a_certificate" {
+  command = apply
+
+  variables {
+    load_balancer = {
+      certificate_arn  = "arn:aws:acm:us-east-2:123456789012:certificate/11111111-1111-1111-1111-111111111111"
+      allow_plain_http = true
+      web_acl_arn      = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/orders/22222222-2222-2222-2222-222222222222"
+    }
+  }
+
+  assert {
+    condition     = output.url == "https://orders-123456789.us-east-2.elb.amazonaws.com"
+    error_message = "allow_plain_http does not downgrade a service that has a certificate."
+  }
+}
