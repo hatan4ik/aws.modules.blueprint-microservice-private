@@ -1,6 +1,9 @@
-# tests/integration/setup is short-lived fixture infrastructure created and
-# destroyed by scripts/integration-e2e.sh in the caller's own account; it is
-# not a deployable pattern and is excluded from misconfiguration scanning.
+# tests/integration/setup and tests/integration/private-ecr are short-lived
+# fixture infrastructure created and destroyed by scripts/integration-e2e.sh in
+# the caller's own account (an ECS cluster; a pull through cache repository
+# holding one stock image for minutes); they are not deployable patterns and
+# are excluded from misconfiguration scanning.
 scan:
   skip-dirs:
     - tests/integration/setup
+    - tests/integration/private-ecr

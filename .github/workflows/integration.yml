@@ -14,6 +14,14 @@ on:
         type: choice
         options:
           - e2e
+      variant:
+        description: "public: ECR Public image through a NAT gateway. private-ecr: no NAT; a private ECR image pulled through the VPC endpoints."
+        required: true
+        default: public
+        type: choice
+        options:
+          - public
+          - private-ecr
 
 permissions:
   contents: read
@@ -25,7 +33,7 @@ concurrency:
 
 jobs:
   integration:
-    name: ${{ inputs.suite }}
+    name: ${{ inputs.suite }} (${{ inputs.variant }})
     runs-on: ubuntu-24.04
     environment: integration
     timeout-minutes: 60
@@ -48,5 +56,8 @@ jobs:
           role-session-name: aws-modules-blueprint-microservice-private-integration
           aws-region: ${{ vars.AWS_INTEGRATION_REGION }}
 
-      - name: Run the ${{ inputs.suite }} suite
-        run: scripts/integration-${{ inputs.suite }}.sh
+      - name: Run the ${{ inputs.suite }} suite, ${{ inputs.variant }} variant
+        env:
+          SUITE: ${{ inputs.suite }}
+          VARIANT: ${{ inputs.variant }}
+        run: scripts/integration-"$SUITE".sh --variant "$VARIANT"

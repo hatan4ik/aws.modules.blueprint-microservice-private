@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+Test infrastructure only; the module's behaviour and interface are unchanged.
+
+### Added
+
+- A `private-ecr` variant of the end-to-end run
+  (`scripts/integration-e2e.sh --variant private-ecr`,
+  `make integration-e2e-private-ecr`, `variant` input of the dispatch-only
+  `integration` workflow). With `network.nat_gateway = false`, a Fargate task
+  pulls a private ECR image through the `ecr.api`, `ecr.dkr`, `s3`, and `logs`
+  endpoints under the 2.0.0 endpoint policies, which the existing run (ECR
+  Public through a NAT gateway) never exercises. The image gets into the
+  account without docker: a new `tests/integration/private-ecr` fixture
+  creates an ECR pull through cache rule for ECR Public and its repository,
+  and imports the image through the registry HTTP API. A new root,
+  `tests/integration/e2e-private-ecr`, applies the blueprint with it.
+- Both variants fail when a stopped task reports `CannotPullContainerError`
+  or `ResourceInitializationError`, and print every stopped task's reason when
+  the apply fails, so a refused pull is diagnosed rather than only timed out.
+  The private-ecr variant also proves the private route tables have no
+  default route.
+- `tests/integration/iam/private-ecr-permissions-policy.json`: the ECR, pull
+  through cache, and service-linked-role permissions the private-ecr variant
+  adds to the integration role.
+- `tests/private_ecr_fixture.tftest.hcl`: credential-free checks of the new
+  fixture, of the blueprint accepting its image with no NAT gateway, and of
+  the variant refusing a public image.
+
 ## [2.0.0] - 2026-10-11
 
 Security hardening. This is a major release because configurations that 1.x
