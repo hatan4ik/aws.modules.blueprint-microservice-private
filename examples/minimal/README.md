@@ -5,12 +5,15 @@ The smallest useful call: a digest-pinned image on the environment's shared clus
 ## Run
 
 ```sh
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars and replace every example value with environment values.
 terraform init
-terraform plan \
-  -var cluster_arn=arn:aws:ecs:us-east-2:123456789012:cluster/platform \
-  -var image=123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:<64 hex> \
-  -var certificate_arn=arn:aws:acm:us-east-2:123456789012:certificate/<uuid>
+terraform plan
 ```
+
+`terraform.tfvars.example` is a complete, sanitized input template. The copied
+`terraform.tfvars` file is deliberately ignored by Git and must use resource
+identifiers from the same region and account as the shared ECS cluster.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements

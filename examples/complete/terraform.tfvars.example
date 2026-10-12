@@ -1,0 +1,29 @@
+# Copy this file to terraform.tfvars and replace every example value before
+# planning. Do not commit terraform.tfvars: it identifies your account and
+# platform resources, and may later contain environment-specific values.
+
+region             = "us-east-2"
+availability_zones = ["us-east-2a", "us-east-2b", "us-east-2c"]
+
+# Read this from the shared ECS/platform root state for this environment.
+cluster_arn = "arn:aws:ecs:us-east-2:123456789012:cluster/platform-dev"
+
+# Pin an immutable image digest; never use a mutable tag such as :latest.
+image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders-api@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+# Regional platform ingress controls.
+certificate_arn    = "arn:aws:acm:us-east-2:123456789012:certificate/00000000-0000-0000-0000-000000000000"
+web_acl_arn        = "arn:aws:wafv2:us-east-2:123456789012:regional/webacl/platform-dev/00000000-0000-0000-0000-000000000000"
+access_logs_bucket = "platform-dev-alb-access-logs-123456789012"
+
+# Application data-plane dependencies. These are resource identifiers, not
+# secret values; the secret value itself remains in AWS Secrets Manager.
+db_password_secret_arn = "arn:aws:secretsmanager:us-east-2:123456789012:secret:platform/dev/orders/db-password-abc123"
+secrets_kms_key_arn    = "arn:aws:kms:us-east-2:123456789012:key/00000000-0000-0000-0000-000000000000"
+orders_table_arn       = "arn:aws:dynamodb:us-east-2:123456789012:table/orders-dev"
+events_queue_arn       = "arn:aws:sqs:us-east-2:123456789012:orders-events-dev"
+events_queue_url       = "https://sqs.us-east-2.amazonaws.com/123456789012/orders-events-dev"
+
+# Shared application-data key. Its policy must admit the resulting ECS log
+# group, as described in this example's README.
+logs_kms_key_arn = "arn:aws:kms:us-east-2:123456789012:key/00000000-0000-0000-0000-000000000000"

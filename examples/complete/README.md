@@ -13,9 +13,17 @@ Before applying, the platform's key policy must admit CloudWatch Logs for `/aws/
 ## Run
 
 ```sh
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars and replace every example value with environment values.
 terraform init
-terraform plan -var-file=orders.tfvars   # cluster_arn, image, certificate_arn, web_acl_arn, access_logs_bucket, and the data ARNs
+terraform plan
 ```
+
+`terraform.tfvars.example` is a complete, sanitized input template. The copied
+`terraform.tfvars` file is deliberately ignored by Git: it identifies your
+account and platform resources and may be extended with environment-specific
+values. It must contain immutable image digests and ARNs/URLs from the same
+region and account as the shared ECS cluster.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements

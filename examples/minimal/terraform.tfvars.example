@@ -1,0 +1,15 @@
+# Copy this file to terraform.tfvars and replace all example values before
+# planning. Do not commit terraform.tfvars: it identifies account-specific
+# platform resources and may later contain environment-specific values.
+
+region             = "us-east-2"
+availability_zones = ["us-east-2a", "us-east-2b"]
+
+# Read this from the shared ECS/platform root state for this environment.
+cluster_arn = "arn:aws:ecs:us-east-2:123456789012:cluster/platform-dev"
+
+# Pin an immutable image digest; never use a mutable tag such as :latest.
+image = "123456789012.dkr.ecr.us-east-2.amazonaws.com/orders@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+# ACM certificate for the service's HTTPS listener.
+certificate_arn = "arn:aws:acm:us-east-2:123456789012:certificate/00000000-0000-0000-0000-000000000000"
