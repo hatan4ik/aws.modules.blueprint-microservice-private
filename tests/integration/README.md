@@ -98,3 +98,69 @@ Every resource carries `Disposable = true` and `IntegrationTest = aws.modules.bl
 1. `terraform -chdir=tests/integration/e2e destroy -var name=... -var cluster_arn=... -var availability_zones=...` (public), or `terraform -chdir=tests/integration/e2e-private-ecr destroy` with the same three and `-var image=...` (private-ecr);
 2. private-ecr only: `terraform -chdir=tests/integration/private-ecr destroy -var name=...` (removes the pull through cache rule and the repository with its image);
 3. `terraform -chdir=tests/integration/setup destroy`.
+
+Alternatively, use the automated janitor tool described below (`make integration-cleanup`).
+
+## SRE / ConOps Debugging & Triage Tools
+
+The repository provides three dedicated scripts in `scripts/` (wrapped as `make` targets) for real-time stack inspection, CI failure triage, and emergency orphan resource cleanup.
+
+### 1. Live Stack Diagnostics (`make integration-diagnose`)
+
+Inspects active AWS infrastructure created by the blueprint integration tests in real time without modifying resources:
+
+```bash
+make integration-diagnose
+# or with options:
+scripts/diagnose-integration-stack.sh --profile <profile> --region <region> --cluster <cluster-name>
+```
+
+**Checks performed:**
+- **Identity & Scope**: Validates caller account and region.
+- **ECS Services & Tasks**: Lists tasks, inspects container states, and extracts exact error reasons from stopped tasks (`CannotPullContainerError`, `ResourceInitializationError`, exit codes).
+- **VPC & Interface Endpoints**: Confirms endpoints (`ecr.api`, `ecr.dkr`, `s3`, `logs`, `secretsmanager`, `ssm`) are `available` and associated with the VPC.
+- **Route Table Verification**: Verifies zero default routes (`0.0.0.0/0`, `::/0`) in private subnets for true isolated egress.
+- **Security Group Validation**: Checks rules and asserts description regex conformity with the EC2 API.
+- **ALB Health & Connectivity**: Probes ALB DNS directly for HTTP 200 responses.
+- **ECR Pull Through Cache**: Checks cache rules and repository image digest availability.
+
+### 2. GitHub Actions Incident Triage (`make integration-triage`)
+
+Triages GitHub Actions integration workflow runs, filtering out teardown noise and isolating the exact root cause:
+
+```bash
+make integration-triage
+# or inspect a specific run:
+scripts/triage-integration-run.sh --run-id <run-id>
+# or watch an in-flight run:
+scripts/triage-integration-run.sh --watch
+```
+
+**Features:**
+- Highlights failed steps with clear status indicators.
+- Extracts and summarizes the exact failing logs (e.g. AWS API error responses, Terraform errors, ECS container pull failures).
+- Distinguishes primary apply failures from expected teardown errors during unwinding.
+
+### 3. Emergency Cleanup Janitor (`make integration-cleanup`)
+
+If a local or CI run is aborted mid-execution, orphaned AWS resources can be discovered and safely deleted in strict dependency order without Terraform state:
+
+```bash
+# Preview what would be deleted:
+scripts/cleanup-integration-stack.sh --dry-run
+
+# Execute deletion:
+make integration-cleanup
+# or:
+scripts/cleanup-integration-stack.sh --profile <profile> --region <region>
+```
+
+Deletes only resources tagged with `IntegrationTest = aws.modules.blueprint-microservice-private` and matching `bp-e2e-*`, in order:
+1. ECS Services & Tasks
+2. Application Load Balancers & Target Groups
+3. ECR Repositories & Pull Through Cache Rules
+4. VPC Endpoints
+5. Security Groups
+6. VPC, Subnets & Route Tables
+7. ECS Cluster
+

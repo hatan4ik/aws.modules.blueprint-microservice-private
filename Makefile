@@ -18,7 +18,7 @@ TFDOCS_VERSION := v0.20.0
 # only `terraform test` needs 1.8 or later. CI runs the tests with 1.8.5.
 TEST_TERRAFORM ?= terraform
 
-.PHONY: check fmt fmt-fix init validate lint test ordering docs-version docs docs-check security lock integration-e2e integration-e2e-private-ecr clean
+.PHONY: check fmt fmt-fix init validate lint test ordering docs-version docs docs-check security lock integration-e2e integration-e2e-private-ecr integration-diagnose integration-triage integration-cleanup clean
 
 check: fmt validate lint test ordering docs-check security
 
@@ -94,6 +94,16 @@ integration-e2e:
 
 integration-e2e-private-ecr:
 	@scripts/integration-e2e.sh --variant private-ecr
+
+# Diagnostic, triage, and janitor tooling for integration runs and live AWS stacks
+integration-diagnose:
+	@scripts/diagnose-integration-stack.sh
+
+integration-triage:
+	@scripts/triage-integration-run.sh
+
+integration-cleanup:
+	@scripts/cleanup-integration-stack.sh
 
 lock:
 	@echo "==> lock ."
