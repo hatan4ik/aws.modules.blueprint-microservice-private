@@ -107,7 +107,7 @@ Contract tests use `mock_provider` and assert the blueprint's glue: locals (the 
 
 So the suites replace `module.vpc` with fixed outputs (`override_module`, Terraform >= 1.8), and `tests/vpc_contract.tftest.hcl` runs the downloaded, pinned vpc module as the run's root module (`./.terraform/modules/vpc`) with the exact layout the blueprint builds, where its check is a root object that `expect_failures` can name. The module itself still supports Terraform 1.7: CI validates the root on 1.7.5 separately.
 
-For the same reason the end-to-end run is a plain `terraform apply` of `tests/integration/e2e` driven by `scripts/integration-e2e.sh`, not a `terraform test` suite. A leaf-side option to acknowledge the internet path (for example an `internet_path_acknowledged` input on `aws.modules.vpc`) would let a future version move both back into `terraform test`.
+For the same reason the end-to-end runs are plain `terraform apply`s of `tests/integration/e2e` and `tests/integration/e2e-private-ecr` driven by `scripts/integration-e2e.sh`, not a `terraform test` suite. A leaf-side option to acknowledge the internet path (for example an `internet_path_acknowledged` input on `aws.modules.vpc`) would let a future version move both back into `terraform test`.
 
 ## Compatibility
 

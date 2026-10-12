@@ -51,7 +51,7 @@ The suites therefore override `module.vpc` with fixed outputs and assert the val
 
 1. Read the leaf's changelog and diff between the pinned commit and the new release's commit, looking for changed defaults, renamed outputs, and new checks (a new always-firing check in a nested module breaks every test run; see above).
 2. Update the SHA and the version comment in `main.tf` (and the version in the README's "What gets created" headings).
-3. Run `make check`, then the end-to-end run (`make integration-e2e`) in your own account.
+3. Run `make check`, then the end-to-end runs (`make integration-e2e`, and `make integration-e2e-private-ecr` for any change to endpoints, endpoint policies, egress rules, or the execution role) in your own account.
 4. Record it in `CHANGELOG.md`. A leaf upgrade that changes what the blueprint creates is a minor or major blueprint release.
 
 ## Commits and pull requests

@@ -1,0 +1,65 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PullThroughCacheRules",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreatePullThroughCacheRule",
+        "ecr:DeletePullThroughCacheRule",
+        "ecr:DescribePullThroughCacheRules"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RegistryLogin",
+      "Effect": "Allow",
+      "Action": "ecr:GetAuthorizationToken",
+      "Resource": "*"
+    },
+    {
+      "Sid": "CacheRepositoryLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository",
+        "ecr:DeleteRepository",
+        "ecr:DescribeRepositories",
+        "ecr:ListTagsForResource",
+        "ecr:TagResource"
+      ],
+      "Resource": "arn:aws:ecr:*:<ACCOUNT_ID>:repository/bp-e2e-*"
+    },
+    {
+      "Sid": "ImportThroughTheCache",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchGetImage",
+        "ecr:BatchImportUpstreamImage",
+        "ecr:DescribeImages",
+        "ecr:BatchCheckLayerAvailability"
+      ],
+      "Resource": "arn:aws:ecr:*:<ACCOUNT_ID>:repository/bp-e2e-*"
+    },
+    {
+      "Sid": "PullThroughCacheServiceLinkedRole",
+      "Effect": "Allow",
+      "Action": "iam:CreateServiceLinkedRole",
+      "Resource": "arn:aws:iam::<ACCOUNT_ID>:role/aws-service-role/pullthroughcache.ecr.amazonaws.com/AWSServiceRoleForECRPullThroughCache",
+      "Condition": {
+        "StringEquals": {
+          "iam:AWSServiceName": "pullthroughcache.ecr.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "DiagnoseTasksAndRoutes",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:ListTasks",
+        "ecs:DescribeTasks",
+        "ec2:DescribeRouteTables"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
