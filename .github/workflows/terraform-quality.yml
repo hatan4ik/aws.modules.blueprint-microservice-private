@@ -31,6 +31,8 @@ jobs:
             terraform_version: 1.7.5
           - directory: tests/integration/e2e
             terraform_version: 1.7.5
+          - directory: tests/integration/e2e-private-ecr
+            terraform_version: 1.7.5
     uses: hatan4ik/terraform-pipelines/.github/workflows/terraform-quality.yml@8fc2a04c7931dd449097bb92b15b085278e3f67a # v0.1.1
     with:
       working_directory: ${{ matrix.directory }}

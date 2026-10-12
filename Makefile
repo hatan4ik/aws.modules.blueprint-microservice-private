@@ -5,7 +5,7 @@ SHELL := /bin/bash
 # validated and linted like any module.
 ROOT_DIRS     := .
 EXAMPLE_DIRS  := $(sort $(patsubst %/,%,$(dir $(wildcard examples/*/*.tf))))
-FIXTURE_DIRS  := tests/integration/setup tests/integration/e2e
+FIXTURE_DIRS  := tests/integration/setup tests/integration/e2e tests/integration/private-ecr tests/integration/e2e-private-ecr
 ALL_DIRS      := $(ROOT_DIRS) $(EXAMPLE_DIRS) $(FIXTURE_DIRS)
 TFLINT_CONFIG := $(CURDIR)/.tflint.hcl
 TFDOCS_CONFIG := $(CURDIR)/.terraform-docs.yml
@@ -18,7 +18,7 @@ TFDOCS_VERSION := v0.20.0
 # only `terraform test` needs 1.8 or later. CI runs the tests with 1.8.5.
 TEST_TERRAFORM ?= terraform
 
-.PHONY: check fmt fmt-fix init validate lint test ordering docs-version docs docs-check security lock integration-e2e clean
+.PHONY: check fmt fmt-fix init validate lint test ordering docs-version docs docs-check security lock integration-e2e integration-e2e-private-ecr clean
 
 check: fmt validate lint test ordering docs-check security
 
@@ -87,10 +87,13 @@ security:
 	  echo "==> security trivy . (skipped: trivy not on PATH)"; \
 	fi
 
-# Creates real, billable resources in the caller's own account and destroys
+# Create real, billable resources in the caller's own account and destroy
 # them afterwards. See tests/integration/README.md.
 integration-e2e:
-	@scripts/integration-e2e.sh
+	@scripts/integration-e2e.sh --variant public
+
+integration-e2e-private-ecr:
+	@scripts/integration-e2e.sh --variant private-ecr
 
 lock:
 	@echo "==> lock ."
