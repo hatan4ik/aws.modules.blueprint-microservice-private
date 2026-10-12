@@ -4,9 +4,9 @@ All notable changes to this module are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Consumers pin the commit SHA of a release tag; see [Versioning and releases](README.md#versioning-and-releases).
 
-## [Unreleased]
+## [2.0.0] - 2026-10-12
 
-Test infrastructure only; the module's behaviour and interface are unchanged.
+Security hardening and verified private-ECR zero-egress end-to-end delivery. This is a major release because configurations that 1.x accepted now fail at plan, and a running service can lose access it had: Semantic Versioning treats both as incompatible changes to the public interface, and the README's versioning rule requires a major release for them.
 
 ### Added
 
@@ -33,12 +33,9 @@ Test infrastructure only; the module's behaviour and interface are unchanged.
   fixture, of the blueprint accepting its image with no NAT gateway, and of
   the variant refusing a public image.
 
-## [2.0.0] - 2026-10-11
+### Fixed
 
-Security hardening. This is a major release because configurations that 1.x
-accepted now fail at plan, and a running service can lose access it had:
-Semantic Versioning treats both as incompatible changes to the public
-interface, and the README's versioning rule requires a major release for them.
+- **ALB Security Group Description:** Pinned `aws.modules.alb` to `84bc394` to resolve AWS EC2 API HTTP 400 `InvalidParameterValue` on single quotes (`ALB's` -> `ALB`). Verified live in end-to-end AWS integration run.
 
 ### Upgrading from 1.x
 
