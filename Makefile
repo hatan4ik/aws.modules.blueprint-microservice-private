@@ -31,24 +31,38 @@ fmt-fix:
 	@terraform fmt -recursive
 
 init:
-	@for dir in $(ALL_DIRS); do \
-	  echo "==> init $$dir"; \
-	  (cd "$$dir" && terraform init -backend=false -input=false >/dev/null) || exit 1; \
-	done
+	@if command -v tfkit >/dev/null 2>&1; then \
+	  echo "==> tfkit module validate (handles init + validate)"; \
+	else \
+	  for dir in $(ALL_DIRS); do \
+	    echo "==> init $$dir"; \
+	    (cd "$$dir" && terraform init -backend=false -input=false >/dev/null) || exit 1; \
+	  done; \
+	fi
 
-validate: init
-	@for dir in $(ALL_DIRS); do \
-	  echo "==> validate $$dir"; \
-	  (cd "$$dir" && terraform validate) || exit 1; \
-	done
+validate:
+	@if command -v tfkit >/dev/null 2>&1; then \
+	  tfkit module validate; \
+	else \
+	  for dir in $(ALL_DIRS); do \
+	    echo "==> init $$dir"; \
+	    (cd "$$dir" && terraform init -backend=false -input=false >/dev/null) || exit 1; \
+	    echo "==> validate $$dir"; \
+	    (cd "$$dir" && terraform validate) || exit 1; \
+	  done; \
+	fi
 
 lint:
-	@echo "==> lint (tflint --init)"
-	@tflint --init --config="$(TFLINT_CONFIG)"
-	@for dir in $(ALL_DIRS); do \
-	  echo "==> lint $$dir"; \
-	  (cd "$$dir" && tflint --config="$(TFLINT_CONFIG)" --format compact) || exit 1; \
-	done
+	@if command -v tfkit >/dev/null 2>&1; then \
+	  tfkit module lint; \
+	else \
+	  echo "==> lint (tflint --init)"; \
+	  tflint --init --config="$(TFLINT_CONFIG)"; \
+	  for dir in $(ALL_DIRS); do \
+	    echo "==> lint $$dir"; \
+	    (cd "$$dir" && tflint --config="$(TFLINT_CONFIG)" --format compact) || exit 1; \
+	  done; \
+	fi
 
 test:
 	@$(TEST_TERRAFORM) version -json | python3 -c 'import json,sys; v=tuple(int(p) for p in json.load(sys.stdin)["terraform_version"].split(".")[:2]); sys.exit(0 if v >= (1, 8) else 1)' || { \
@@ -97,17 +111,33 @@ integration-e2e-private-ecr:
 
 # Diagnostic, triage, and janitor tooling for integration runs and live AWS stacks
 integration-diagnose:
-	@scripts/diagnose-integration-stack.sh
+	@if command -v tfkit >/dev/null 2>&1; then \
+	  tfkit ops diagnose --prefix bp-e2e-; \
+	else \
+	  scripts/diagnose-integration-stack.sh; \
+	fi
 
 integration-triage:
-	@scripts/triage-integration-run.sh
+	@if command -v tfkit >/dev/null 2>&1; then \
+	  tfkit ops triage --repo hatan4ik/aws.modules.blueprint-microservice-private; \
+	else \
+	  scripts/triage-integration-run.sh; \
+	fi
 
 integration-cleanup:
-	@scripts/cleanup-integration-stack.sh
+	@if command -v tfkit >/dev/null 2>&1; then \
+	  tfkit ops janitor --prefix bp-e2e-; \
+	else \
+	  scripts/cleanup-integration-stack.sh; \
+	fi
 
 lock:
-	@echo "==> lock ."
-	@terraform providers lock -platform=linux_amd64 -platform=linux_arm64 -platform=darwin_amd64 -platform=darwin_arm64
+	@if command -v tfkit >/dev/null 2>&1; then \
+	  tfkit module lock; \
+	else \
+	  echo "==> lock ."; \
+	  terraform providers lock -platform=linux_amd64 -platform=linux_arm64 -platform=darwin_amd64 -platform=darwin_arm64; \
+	fi
 
 clean:
 	@echo "==> clean ."
