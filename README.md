@@ -119,7 +119,7 @@ The values that cross module boundaries, each asserted by a test in `tests/wirin
 | `container.secrets` | the secret-store endpoints, the container's secrets, and the execution role's derived policy | |
 | `cluster_arn` | the service's cluster, the roles' trust conditions, the log group name | guarded against the provider's account and region |
 
-**Ordering.** ECS rejects `CreateService` while the target group is not yet attached to a load balancer, and `aws.modules.alb`'s `target_group_arns` output depends only on the target group, not on its listener. Passed straight through, Terraform would create the service in parallel with the listener and the first apply would fail intermittently. The blueprint routes the ARN through the forwarding listener's ARN, so the service waits for the listener and nothing else waits for the ALB. `scripts/check-listener-ordering.sh` (CI job `listener-ordering`, `make ordering`) fails if that edge ever disappears from `terraform graph`.
+**Ordering.** ECS rejects `CreateService` while the target group is not yet attached to a load balancer, and `aws.modules.alb`'s `target_group_arns` output depends only on the target group, not on its listener. Passed straight through, Terraform would create the service in parallel with the listener and the first apply would fail intermittently. The blueprint routes the ARN through the forwarding listener's ARN, so the service waits for the listener and nothing else waits for the ALB. `scripts/check-listener-ordering.sh` (CI job `listener-ordering`, `make ordering`) fails unless every ECS service resource in `terraform graph` is still ordered after both listeners, directly or through an intermediate resource.
 
 ## Failure modes of the composition
 

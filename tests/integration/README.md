@@ -99,7 +99,7 @@ Every resource carries `Disposable = true` and `IntegrationTest = aws.modules.bl
 2. private-ecr only: `terraform -chdir=tests/integration/private-ecr destroy -var name=...` (removes the pull through cache rule and the repository with its image);
 3. `terraform -chdir=tests/integration/setup destroy`.
 
-Alternatively, use the automated janitor tool described below (`make integration-cleanup`).
+Alternatively, the janitor tool described below (`make integration-cleanup`) removes the compute and network-attachment resources without Terraform state. It does not delete the VPC, subnets, route tables, internet gateway or security groups; use the Terraform steps above for those.
 
 ## SRE / ConOps Debugging & Triage Tools
 
@@ -143,24 +143,33 @@ scripts/triage-integration-run.sh --watch
 
 ### 3. Emergency Cleanup Janitor (`make integration-cleanup`)
 
-If a local or CI run is aborted mid-execution, orphaned AWS resources can be discovered and safely deleted in strict dependency order without Terraform state:
+If a local or CI run is aborted mid-execution, orphaned AWS resources can be discovered and deleted in dependency order without Terraform state:
 
 ```bash
-# Preview what would be deleted:
+# Preview exactly what would be deleted (nothing is changed, no confirmation needed):
 scripts/cleanup-integration-stack.sh --dry-run
 
-# Execute deletion:
+# Interactive: lists what will be deleted, then asks you to type "delete":
 make integration-cleanup
 # or:
 scripts/cleanup-integration-stack.sh --profile <profile> --region <region>
+
+# Unattended (CI, no terminal): refuses to run (exit 2) unless you pass --yes:
+scripts/cleanup-integration-stack.sh --yes
 ```
 
-Deletes only resources tagged with `IntegrationTest = aws.modules.blueprint-microservice-private` and matching `bp-e2e-*`, in order:
-1. ECS Services & Tasks
-2. Application Load Balancers & Target Groups
-3. ECR Repositories & Pull Through Cache Rules
-4. VPC Endpoints
-5. Security Groups
-6. VPC, Subnets & Route Tables
-7. ECS Cluster
+A resource is selected only when its name starts with `--prefix` (default `bp-e2e-`, which must match `^[a-z0-9][a-z0-9-]{2,}$`) **and** it carries `IntegrationTest = aws.modules.blueprint-microservice-private`. Two kinds of resource cannot be matched on the tag, so the prefix alone selects them and the plan lists them under `UNTAGGED`: ECR pull-through cache rules (AWS cannot tag them) and ECR repositories with no tags at all (the ones a pull through cache creates itself).
+
+It deletes, waiting for each stage to finish before starting the next:
+1. ECS services (scaled to zero, deleted, waited until inactive)
+2. Application Load Balancers (waited until deleted)
+3. Target groups
+4. ECR repositories and pull through cache rules
+5. VPC endpoints (polled until gone, 5 minute limit)
+6. NAT gateways (waited until deleted) and their Elastic IPs
+7. The ECS cluster, last
+
+It does **not** delete the VPC, subnets, route tables, internet gateway or security groups, and does not touch CloudWatch log groups, task definitions, IAM roles or the flow-log KMS key. It lists the VPC-level resources it finds so you can see what remains; remove them with the Terraform steps in "Cleaning up after an interrupted run".
+
+Failures are never swallowed: every failed call is printed and counted, the run continues, and it exits `1` with a summary if anything failed or a cluster survived. It only prints `Cleanup complete` when every selected resource was deleted. `AWS_PROFILE` is used when set; there is no default profile.
 
