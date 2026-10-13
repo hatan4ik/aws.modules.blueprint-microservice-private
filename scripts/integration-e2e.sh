@@ -56,49 +56,86 @@ e2e_vars() {
 # endpoint policy, or the execution role refusing the pull). Stopped tasks
 # stay visible for about an hour, long enough for both the success path and
 # the cleanup after a failed apply.
+#
+# A failed AWS call (missing CLI, ecs:ListTasks denied, wrong region or
+# cluster) is an error, never "no stopped tasks": the gate must not pass
+# vacuously. A failure that has already been reported is not reported a second
+# time by the cleanup trap, but a check that passed (or found nothing) is NOT
+# remembered: tasks can still stop during the later HTTP probe, and the trap
+# must then be able to explain why.
+stopped_tasks_reported=0
 check_stopped_tasks() {
   [ -n "${cluster_arn:-}" ] && [ -n "${name:-}" ] || return 0
-  local arns
-  arns="$(aws ecs list-tasks --cluster "$cluster_arn" --service-name "$name" --desired-status STOPPED \
-    --query 'taskArns' --output text 2>/dev/null || true)"
+  [ "$stopped_tasks_reported" -eq 0 ] || return 0
+  local arns reasons errfile
+  errfile="$(mktemp)"
+  if ! arns="$(aws ecs list-tasks --cluster "$cluster_arn" --service-name "$name" --desired-status STOPPED \
+    --query 'taskArns' --output text 2>"$errfile")"; then
+    echo "error: could not list stopped tasks of service $name in $cluster_arn:" >&2
+    cat "$errfile" >&2
+    rm -f "$errfile"
+    stopped_tasks_reported=1
+    return 1
+  fi
   if [ -z "$arns" ] || [ "$arns" = "None" ]; then
+    rm -f "$errfile"
     echo "ok: no stopped tasks for service $name"
     return 0
   fi
-  local reasons
   # shellcheck disable=SC2086 # one argument per task ARN
-  reasons="$(aws ecs describe-tasks --cluster "$cluster_arn" --tasks $arns \
-    --query "tasks[].[taskArn, stopCode, stoppedReason, join('; ', containers[].reason)]" --output text)"
+  if ! reasons="$(aws ecs describe-tasks --cluster "$cluster_arn" --tasks $arns \
+    --query "tasks[].[taskArn, stopCode, stoppedReason, join('; ', containers[].reason)]" --output text 2>"$errfile")"; then
+    echo "error: could not describe the stopped tasks of service $name:" >&2
+    cat "$errfile" >&2
+    rm -f "$errfile"
+    stopped_tasks_reported=1
+    return 1
+  fi
+  rm -f "$errfile"
   echo "==> stopped tasks of $name"
   echo "$reasons"
   if grep -Eq 'CannotPullContainerError|ResourceInitializationError' <<<"$reasons"; then
     echo "error: a task could not pull its image or initialise; see the reasons above" >&2
+    stopped_tasks_reported=1
     return 1
   fi
 }
+
+# Set once the matching `terraform init` has completed; destroy only runs for
+# roots that were initialised, so an early failure does not add init/provider
+# errors from destroying a root that was never set up.
+setup_inited=0
+image_inited=0
+e2e_inited=0
 
 # shellcheck disable=SC2329 # invoked by the EXIT trap
 cleanup() {
   status=$?
   if [ "$status" -ne 0 ]; then
+    # Diagnostic only: the run already failed, and the check reports its own errors.
     check_stopped_tasks || true
   fi
-  echo "==> destroy blueprint"
-  local vars=()
-  while IFS= read -r -d '' arg; do vars+=("$arg"); done < <(e2e_vars)
-  terraform -chdir="$e2e" destroy -auto-approve -input=false -no-color "${vars[@]}" || status=1
-  if [ "$variant" = "private-ecr" ]; then
+  if [ "$e2e_inited" -eq 1 ]; then
+    echo "==> destroy blueprint"
+    local vars=()
+    while IFS= read -r -d '' arg; do vars+=("$arg"); done < <(e2e_vars)
+    terraform -chdir="$e2e" destroy -auto-approve -input=false -no-color "${vars[@]}" || status=1
+  fi
+  if [ "$variant" = "private-ecr" ] && [ "$image_inited" -eq 1 ]; then
     echo "==> destroy private ECR image"
     terraform -chdir="$image_fixture" destroy -auto-approve -input=false -no-color -var "name=${name:-unused}" || status=1
   fi
-  echo "==> destroy fixtures"
-  terraform -chdir="$setup" destroy -auto-approve -input=false -no-color || status=1
+  if [ "$setup_inited" -eq 1 ]; then
+    echo "==> destroy fixtures"
+    terraform -chdir="$setup" destroy -auto-approve -input=false -no-color || status=1
+  fi
   exit "$status"
 }
 trap cleanup EXIT
 
 echo "==> fixtures (variant: $variant)"
 terraform -chdir="$setup" init -backend=false -input=false -no-color >/dev/null
+setup_inited=1
 terraform -chdir="$setup" apply -auto-approve -input=false -no-color
 name="$(terraform -chdir="$setup" output -raw name)"
 cluster_arn="$(terraform -chdir="$setup" output -raw cluster_arn)"
@@ -107,6 +144,7 @@ zones="$(terraform -chdir="$setup" output -json availability_zones)"
 if [ "$variant" = "private-ecr" ]; then
   echo "==> private ECR image (pull through cache from ECR Public, imported without docker)"
   terraform -chdir="$image_fixture" init -backend=false -input=false -no-color >/dev/null
+  image_inited=1
   terraform -chdir="$image_fixture" apply -auto-approve -input=false -no-color -var "name=$name"
   image="$(terraform -chdir="$image_fixture" output -raw image)"
 fi
@@ -115,6 +153,7 @@ echo "==> blueprint (apply waits for the task to pass ALB health checks)"
 vars=()
 while IFS= read -r -d '' arg; do vars+=("$arg"); done < <(e2e_vars)
 terraform -chdir="$e2e" init -backend=false -input=false -no-color >/dev/null
+e2e_inited=1
 terraform -chdir="$e2e" apply -auto-approve -input=false -no-color "${vars[@]}"
 
 if [ "$variant" = "private-ecr" ]; then
@@ -133,11 +172,15 @@ check_stopped_tasks
 
 url="$(terraform -chdir="$e2e" output -raw url)"
 echo "==> GET $url"
+# Each attempt is bounded by curl's own timeouts, and the loop also stops once
+# five minutes have passed, so a hanging connect cannot stretch the probe.
+deadline=$((SECONDS + 300))
 for attempt in $(seq 1 30); do
-  if curl -fsS -o /dev/null "$url/"; then
+  if curl -fsS --connect-timeout 5 --max-time 15 -o /dev/null "$url/"; then
     echo "ok: $url answered 200 through the ALB on attempt $attempt (variant: $variant)"
     exit 0
   fi
+  [ "$SECONDS" -lt "$deadline" ] || break
   sleep 10
 done
 echo "error: $url did not answer within 5 minutes" >&2
